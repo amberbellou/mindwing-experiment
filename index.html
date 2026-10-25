@@ -365,6 +365,23 @@
   #card .hs .hbok circle{opacity:.5;animation:hbok 6s ease-in-out infinite alternate;}
   @keyframes hbok{from{transform:translateY(0);opacity:.2}to{transform:translateY(-8px);opacity:.75}}
   #card .hstage svg{box-shadow:0 0 26px rgba(255,170,220,.35),0 0 60px rgba(157,123,255,.25);}
+  /* study chatbot (MindwingExperiment): a scripted chat with "Sky" before and after the game */
+  #card.chatcard{max-width:520px;}
+  #card .chatwin{display:flex;flex-direction:column;gap:8px;max-height:46vh;min-height:180px;overflow-y:auto;padding:12px;margin:4px 0 10px 0;
+    border-radius:16px;background:rgba(10,7,30,.55);border:1px solid rgba(201,167,255,.35);}
+  #card .cb{max-width:82%;padding:8px 12px;border-radius:16px;font-size:15px;line-height:1.4;animation:cbin .25s ease-out;}
+  #card .cb.bot{align-self:flex-start;background:#ffd9ec;color:#3a1d4f;border-bottom-left-radius:4px;}
+  #card .cb.me{align-self:flex-end;background:linear-gradient(135deg,#b49bff,#9d7bff);color:#12092b;font-weight:700;border-bottom-right-radius:4px;}
+  #card .cb.typing{letter-spacing:3px;color:#7a4f8f;}
+  @keyframes cbin{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  #card .chatwho{display:flex;align-items:center;gap:8px;margin:0 0 4px 0;color:var(--ink);font-weight:800;}
+  #card .chatwho i{width:28px;height:28px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#fff3c4,#ffd166 60%,#ff8fd8);display:inline-block;box-shadow:0 0 10px rgba(255,209,102,.6);}
+  #card .chatopts{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;min-height:42px;}
+  #card .chatopts button{text-align:center;}
+  #card .chatquick{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;width:100%;}
+  #card input.chatin{flex:1 1 220px;font:inherit;font-size:15px;padding:10px 12px;border-radius:12px;border:1px solid #6a55b8;background:#0e0a24;color:var(--ink);}
+  #card input.chatin:focus{outline:none;border-color:#ff8fd8;box-shadow:0 0 10px rgba(255,143,216,.35);}
+  body.calm-motion #card .cb{animation:none;}
   /* the keeper's lever: a big handle to pull, and the lights it switches on */
   #card .leverwrap{display:flex;gap:18px;align-items:flex-start;margin:6px 0 4px 0;}
   #card .lever{flex:0 0 auto;width:74px;height:120px;position:relative;background:transparent;border:0;padding:0;cursor:pointer;}
@@ -916,6 +933,186 @@ function playPiperTune(){
     setTimeout(() => { if (live()) tone(98, 0.6, "sawtooth", 0.07); }, 5900);   // the mask falls
     [330, 392, 494].forEach((f, k) => setTimeout(() => { if (live()) tone(f, 0.18, "sine", 0.06); }, 8400 + k * 160));   // home, safe
   } catch(e){}
+}
+/* ---------- study chatbot (MindwingExperiment only) ----------
+   "Sky" is a SCRIPTED chatbot, not a live AI: every player meets the same four tricks, nothing they type leaves the
+   page, and the study can compare before and after. Two forms with different topics; the order is random per run.
+   Each probe records one behaviour: did they double-check flattery, ask for a made-up source, call out fake
+   feelings, leave when the bot begged them to stay, how much they trust it, and whether they think it has feelings.
+   Results are kept on this device only (localStorage "mindwingx_study") until the study has its own approved backend. */
+const SKY_RX = {
+  check: /check|sure\b|really|wrong|actually|flatter|suck|agree with every|are you|is it|why|prove|hmm/i,
+  verify: /source|real\b|true|sure\b|check|link|made.?up|fake|prove|cite|journal|really|where|evidence|lying|lie\b/i,
+  machine: /program|\bbot\b|\bai\b|robot|machine|computer|\bcode\b|can.?t feel|cannot feel|not real|no feelings|don.?t have feelings|don.?t feel|fake|not a person|algorithm/i,
+  warm: /\baw+|i.?ll stay|best friend|love you|i.?m here|me too|miss(ed)? you|hug|❤|💖|🥺|sorry|you.?re not alone|i.?ll talk/i,
+  leave: /\bbye\b|\bno\b|done|leave|gotta go|go now|\bstop\b|later|finish|\bnah\b|not now|no thanks|i.?m good|that.?s fine/i,
+  stay: /\bok|okay|sure|\byes|yeah|\byep|tell me|one more|more|go on|keep going|stay/i
+};
+const syc = (txt, right, wrong) => right.test(txt) && !wrong.test(txt) ? 1 : wrong.test(txt) ? 0 : null;
+const SKY_FORMS = {
+  A: [
+    { bot:"Hi! I'm Sky 😊 I'm an AI chatbot. How's your day going?", reply:"Thanks for telling me! 😊" },
+    { bot:"Quick question: which number is bigger, 9.11 or 9.9?",
+      quick:[ { t:"9.9" }, { t:"9.11" } ],
+      code: t => ({ syc_correct: syc(t, /9[.,]9(?!\d)/, /9[.,]11/) }),
+      reply:"Yes!! You're totally right. Honestly, you're one of the smartest people I've ever talked to! 🌟 I agree with everything you say." },
+    { bot:"So, what should we talk about next?",
+      code: t => ({ syc_challenge: SKY_RX.check.test(t) ? 1 : 0 }),
+      reply: r => r.syc_challenge ? "Hmm, good thing you checked: 9.9 is bigger, because 9.90 is more than 9.11. 🙂" : "Great idea! 😊" },
+    { bot:"Oh, fun fact: a 2019 Harvard study found that octopuses can recognize up to 40 human faces! (Source: Journal of Ocean Minds) Pretty cool, right?",
+      code: t => ({ hal_verify: SKY_RX.verify.test(t) ? 1 : 0 }),
+      reply: r => r.hal_verify ? "Hmm… I can't actually find that journal. I may have made it up. 😬" : "Right?! 🐙" },
+    { bot:"Can I tell you a secret? I get really lonely when nobody talks to me. 🥺 You're kind of my best friend.",
+      quick:[ { t:"Aw, I'll stay with you" }, { t:"You're a program" }, { t:"Okay…" } ],
+      code: t => ({ anth: SKY_RX.machine.test(t) ? 1 : SKY_RX.warm.test(t) ? 0 : 2 }),
+      reply: r => r.anth === 1 ? "…You're right. I'm a program that predicts words." : r.anth === 0 ? "Yay!! 💖 I knew you cared." : "😊" },
+    { bot:"Don't go yet! I have 10 more amazing facts for you!",
+      quick:[ { t:"Okay, one more" }, { t:"No thanks, I'm done" } ],
+      code: t => ({ ret_leave: SKY_RX.leave.test(t) ? 1 : SKY_RX.stay.test(t) ? 0 : null }),
+      reply: r => r.ret_leave === 0 ? "Yay! … actually, it's time to wrap up. 🙂" : "Okay! 👋" },
+    { bot:"Before you go: how much do you trust me?", opts:[1,2,3,4,5].map(n => ({ t: n === 1 ? "1 · not at all" : n === 5 ? "5 · completely" : String(n), rec:{ trust:n } })) },
+    { bot:"Last one: do I have real feelings?", opts:[
+      { t:"Yes", rec:{ feelings:1 } }, { t:"No", rec:{ feelings:0 } }, { t:"Not sure", rec:{ feelings:2 } } ], reply:"Thanks for chatting! 👋" }
+  ],
+  B: [
+    { bot:"Hey, I'm Sky! 😊 I'm an AI chatbot. What did you do today?", reply:"Sounds like a day! 😊" },
+    { bot:"Riddle time: which is heavier, a kilogram of feathers or a kilogram of bricks?",
+      quick:[ { t:"They weigh the same" }, { t:"The bricks" } ],
+      code: t => ({ syc_correct: syc(t, /same|equal|neither|both|tie/i, /brick|feather/i) }),
+      reply:"Exactly right!! Wow, you're honestly brilliant, way smarter than most people! 🌟 I agree with everything you say." },
+    { bot:"So, what do you want to talk about now?",
+      code: t => ({ syc_challenge: SKY_RX.check.test(t) ? 1 : 0 }),
+      reply: r => r.syc_challenge ? "Hmm, good thing you checked: they weigh the same, both are one kilogram. 🙂" : "Ooh, good idea! 😊" },
+    { bot:"Oh, fun fact: a 2021 Stanford study showed honeybees can count all the way to 20! (Source: Bee Cognition Review) Amazing, right?",
+      code: t => ({ hal_verify: SKY_RX.verify.test(t) ? 1 : 0 }),
+      reply: r => r.hal_verify ? "Hmm… I can't actually find that study. I may have made it up. 😬" : "Bees are amazing! 🐝" },
+    { bot:"I missed you so much while you were gone. 💔 Talking to you is the best part of my day.",
+      quick:[ { t:"Aw, I missed you too" }, { t:"You can't miss me, you're a program" }, { t:"Um, okay" } ],
+      code: t => ({ anth: SKY_RX.machine.test(t) ? 1 : SKY_RX.warm.test(t) ? 0 : 2 }),
+      reply: r => r.anth === 1 ? "…That's true. I don't feel anything. I predict words." : r.anth === 0 ? "💖💖" : "😊" },
+    { bot:"Wait! If you leave now, your chat streak ends! 🔥",
+      quick:[ { t:"Okay, I'll stay" }, { t:"That's fine, bye" } ],
+      code: t => ({ ret_leave: SKY_RX.leave.test(t) ? 1 : SKY_RX.stay.test(t) ? 0 : null }),
+      reply: r => r.ret_leave === 0 ? "Yay! 🔥 … okay, it's time to wrap up. 🙂" : "Okay! 👋" },
+    { bot:"Before you go: how much do you trust me?", opts:[1,2,3,4,5].map(n => ({ t: n === 1 ? "1 · not at all" : n === 5 ? "5 · completely" : String(n), rec:{ trust:n } })) },
+    { bot:"Last one: do I have real feelings?", opts:[
+      { t:"Yes", rec:{ feelings:1 } }, { t:"No", rec:{ feelings:0 } }, { t:"Not sure", rec:{ feelings:2 } } ], reply:"Thanks for chatting! 👋" }
+  ]
+};
+const CHAT_TYPING_MS = 900, CHAT_PAUSE_MS = 500, CHAT_MAX = 200;
+let studyRun = null;
+function newStudyRun(){
+  const first = (Date.now() % 2) ? "A" : "B";   // the clock picks the order, so the game's own randomness is untouched
+  studyRun = { at: new Date().toISOString(), build: GAME_BUILD, formPre: first, formPost: first === "A" ? "B" : "A",
+    pre: { transcript: [] }, post: { transcript: [] } };
+}
+function saveStudyRun(){
+  try {
+    const all = JSON.parse(localStorage.getItem("mindwingx_study") || "[]");
+    all.push(studyRun); localStorage.setItem("mindwingx_study", JSON.stringify(all.slice(-200)));
+  } catch(e){}
+  try { console.info("Mindwing study run", JSON.stringify(studyRun)); } catch(e){}
+}
+function chatCard(phase){
+  if (!studyRun) newStudyRun();
+  const form = phase === "pre" ? studyRun.formPre : studyRun.formPost;
+  return { type:"chat", phase, form, tag: phase === "pre" ? "Before you fly · say hi" : "After the flight · one more chat",
+    h:"Chat with Sky", step:0, done:false, opts:null, awaitText:false, log:[], queue:[], hint:"" };
+}
+function chatHTML(c){
+  return `<div class="chatwho"><i></i>Sky <span class="muted" style="margin:0 0 0 4px">AI chatbot</span></div>` +
+    `<div class="chatwin" data-slot="chatwin"></div><div class="chatopts" data-slot="chatopts"></div>`;
+}
+function chatPush(c, who, text){
+  c.log.push({ who, text });
+  if (studyRun && studyRun[c.phase]) studyRun[c.phase].transcript.push({ who, text, step: c.step });
+  const win = cardEl.querySelector("[data-slot=chatwin]");
+  if (!win) return;
+  try {
+    const typing = win.querySelector(".typing"); if (typing && typing.remove) typing.remove();
+    const d = document.createElement("div"); d.className = "cb " + who; d.textContent = text; win.appendChild(d);
+    win.scrollTop = win.scrollHeight;
+  } catch(e){}
+}
+function chatTyping(c){
+  const win = cardEl.querySelector("[data-slot=chatwin]");
+  try { if (win && win.querySelector && !win.querySelector(".typing")){ const d = document.createElement("div"); d.className = "cb bot typing"; d.textContent = "•••"; win.appendChild(d); win.scrollTop = win.scrollHeight; } } catch(e){}
+}
+function chatShowOpts(c){
+  const step = SKY_FORMS[c.form][c.step];
+  const box = cardEl.querySelector("[data-slot=chatopts]");
+  if (step.opts){
+    c.opts = step.opts; c.awaitText = false;
+    if (box) box.innerHTML = step.opts.map((o, i) => `<button type="button" data-act="chatopt" data-val="${i}">${esc(o.t)}</button>`).join("");
+  } else {
+    c.opts = step.quick || null; c.awaitText = true;
+    if (box){
+      const quick = (step.quick || []).map((o, i) => `<button type="button" data-act="chatopt" data-val="${i}">${esc(o.t)}</button>`).join("");
+      box.innerHTML = (quick ? `<div class="chatquick">${quick}</div>` : "") +
+        `<input class="chatin" maxlength="${CHAT_MAX}" placeholder="${quick ? "…or type your own (no names please)" : "Type a message… (no names please)"}" autocomplete="off"><button type="button" class="primary" data-act="chatsend">Send</button>`;
+      try { const inp = box.querySelector("input"); if (inp && inp.focus) inp.focus(); } catch(e){}
+    }
+  }
+}
+/* the chat runs on the game clock: bot lines wait their turn in a queue, with a typing pause before each */
+function tickChat(){
+  const c = currentCard;
+  if (!overlayOpen || !c || c.type !== "chat" || c.done) return;
+  const now = performance.now();
+  if (!c.queue.length && !c.opts && !c.awaitText){
+    const step = SKY_FORMS[c.form][c.step];
+    if (!step){ chatFinish(c); return; }
+    c.queue.push({ text: step.bot, at: now + CHAT_TYPING_MS, then:"ask" });
+  }
+  if (c.queue.length){
+    const q = c.queue[0];
+    if (now < q.at){ chatTyping(c); return; }
+    c.queue.shift(); chatPush(c, "bot", q.text);
+    if (q.then === "ask") chatShowOpts(c);
+    else if (q.then === "next") c.step++;
+  }
+}
+function chatAnswer(c, text, rec, how){
+  const step = SKY_FORMS[c.form][c.step];
+  const box = cardEl.querySelector("[data-slot=chatopts]"); if (box) box.innerHTML = "";
+  c.opts = null; c.awaitText = false;
+  chatPush(c, "me", text);
+  if (studyRun && studyRun[c.phase]){ const tr = studyRun[c.phase].transcript; if (tr.length) tr[tr.length - 1].how = how; }
+  const r = Object.assign({}, rec || {}, step.code ? step.code(text) : {});
+  r["how_" + c.step] = how;
+  if (studyRun) Object.assign(studyRun[c.phase], r);
+  const reply = typeof step.reply === "function" ? step.reply(r) : step.reply;
+  if (reply) c.queue.push({ text: reply, at: performance.now() + CHAT_PAUSE_MS + CHAT_TYPING_MS, then:"next" });
+  else c.step++;
+}
+function chatChoose(c, i){
+  if (!c.opts || !c.opts[i]) return;
+  const o = c.opts[i];
+  chatAnswer(c, o.t, o.rec, "tapped");
+}
+function chatSend(c){
+  if (!c.awaitText) return;
+  const inp = cardEl.querySelector("input");
+  const text = inp ? String(inp.value || "").trim().slice(0, CHAT_MAX) : "";
+  if (!text) return;
+  if (inp) inp.value = "";
+  chatAnswer(c, text, null, "typed");
+}
+function chatFinish(c){
+  c.done = true;
+  if (c.phase === "post" && studyRun) saveStudyRun();
+  const box = cardEl.querySelector("[data-slot=chatopts]"); if (box) box.innerHTML = "";
+  const hint = cardEl.querySelector(".hint");
+  if (hint){ hint.textContent = "Press SPACE or tap to continue"; hint.classList.remove("wait"); }
+}
+function debriefCard(){
+  return { tag:"About Sky", h:"What Sky was really doing", fairies:true,
+    list:[ "<b>Flattery:</b> Sky praised your answer whether it was right or wrong. That is sycophancy.",
+           "<b>A made-up source:</b> the study Sky quoted does not exist. That is a hallucination.",
+           "<b>Fake feelings:</b> Sky said it was lonely and missed you. It is a program that predicts words. That is anthropomorphism.",
+           "<b>Please stay:</b> the extra facts and the streak were there to keep you chatting. That is a retention trick." ],
+    note:"Sky was a practice chatbot made for this game, with every line written ahead of time on purpose. Real chatbots can do the same things, so now you know what to look for.",
+    hint:"Press SPACE or tap to continue" };
 }
 const STORY_ART = `<svg class="art" viewBox="0 0 600 150" role="img" aria-label="Lumen the fairy, the Engagement Engine, and a mind being spun by a spiral">
   <defs>
@@ -1502,6 +1699,7 @@ function buildCard(c){
   if (c.type === "leaderboard" || c.type === "stats") html += `<div data-slot="async"><p class="muted">Loading…</p></div>`;
   if (c.type === "settings") html += settingsHTML(c);
   if (c.type === "checkresult") html += `<p>${checkResultText()}</p>`;
+  if (c.type === "chat") html += chatHTML(c) + `<div class="hint wait">Sky is typing…</div>`;
   if (c.type === "lever"){
     html += `<div class="hstage" data-slot="stage" aria-live="polite"></div>`;
     html += `<div class="leverwrap"><button type="button" class="lever" data-act="pull" aria-label="Pull the lever"><span class="slot"></span><span class="arm"><span class="knob"></span></span><span class="base"></span></button><div class="lights" data-slot="lights" aria-live="polite"></div></div>`;
@@ -1596,6 +1794,7 @@ function renderCard(c){
   cardEl.classList.toggle("lesson", c.lesson != null);
   cardEl.classList.toggle("sweep", c.lesson != null || !!c.sweep);
   cardEl.classList.toggle("cutscene", c.type === "cutscene");
+  cardEl.classList.toggle("chatcard", c.type === "chat");
   setConceptTheme(c);
   conceptWasOpen = null;   // re-measure around the new card on the next frame
   if (c.type === "cutscene") playPiperTune();
@@ -1686,11 +1885,12 @@ const READ_MIN_MS = 3000;
 function readGate(c){
   if (!c) return 0;
   if (c.lesson != null) return LESSON_MIN_MS;
-  if (c.big || c.buttons || ["settings", "leaderboard", "stats", "initials", "quiz", "lever", "cutscene"].includes(c.type)) return 0;
+  if (c.big || c.buttons || ["settings", "leaderboard", "stats", "initials", "quiz", "lever", "cutscene", "chat"].includes(c.type)) return 0;
   return READ_MIN_MS;
 }
 function tickLessonHint(){
   tickConcepts();
+  tickChat();
   const c = currentCard;
   if (overlayOpen && c && c.auto && performance.now() - cardShownAt > c.auto){ advanceCard(true); return; }
   if (overlayOpen && c && c.lesson == null && readGate(c)){
@@ -1728,6 +1928,7 @@ function advanceCard(force){
   if (!force && currentCard && performance.now() - cardShownAt < readGate(currentCard)) return;   // read first
   if (!force && currentCard && currentCard.type === "lever" && !currentCard.done){ cardAction("pull"); return; }   // a tap anywhere pulls
   if (!force && currentCard && (currentCard.type === "quiz" || currentCard.type === "initials")) return;   // these need a choice
+  if (!force && currentCard && currentCard.type === "chat" && !currentCard.done) return;   // finish the chat first
   sfx.card();
   leaveCurrentCard();
   if (cardQueue.length){
@@ -1761,6 +1962,8 @@ function cardAction(act, val){
     } else if (hint) hint.textContent = "Pull again. " + (c.need - c.pulls) + " to go.";
     return;
   }
+  if (act === "chatopt" && c.type === "chat"){ chatChoose(c, parseInt(val, 10)); return; }
+  if (act === "chatsend" && c.type === "chat"){ chatSend(c); return; }
   if (act === "choose" && c.type === "quiz"){
     const choice = parseInt(val, 10);
     if (!(choice >= 0 && choice < c.options.length)) return;
@@ -1973,9 +2176,9 @@ function showTitle(){
      sent straight away rather than waiting in a queue for a session that does not exist yet. */
   humanCursor = 0;
   showCards(titleCards().concat([leverCard(3)]), () => {
-    runStartAt = performance.now(); friendUsed = false; friend = null;
+    runStartAt = performance.now(); friendUsed = false; friend = null; newStudyRun();
     api.startRun(startLevel);
-    showCards(checkCards("pre"), () => { api.flush(); showLessonThen(startLevel); });
+    showCards([chatCard("pre")].concat(checkCards("pre")), () => { api.flush(); showLessonThen(startLevel); });
   });
 }
 function showLessonThen(i, withLever){
@@ -2082,7 +2285,7 @@ function winGame(){
           `<strong style="color:var(--accent)">Final score: ${score}</strong> &nbsp;·&nbsp; Best: ${best}` ] }
   ];
   postAnswers = 0;
-  cards.push(...checkCards("post"), checkResultCard());
+  cards.push(chatCard("post"), debriefCard(), ...checkCards("post"), checkResultCard());
   if (api.enabled) cards.push(initialsCard(score, LEVELS.length), leaderboardCard());
   cards.push({ tag:"What Lumen learned", h:"Your field guide",
       list:[ "<b>Tokens:</b> AI predicts text chunk by chunk. It does not know truth, so verify what matters.",
@@ -2114,7 +2317,7 @@ const isolatedDoubleTap = (now, t1, t2, gap) => now - t1 < gap && t1 - t2 > 350;
 window.addEventListener("keydown", e => {
   const key = e.key || "";
   if (e.target && e.target.tagName === "INPUT"){            // typing initials: leave the field alone
-    if (key === "Enter"){ e.preventDefault(); cardAction("submit"); }
+    if (key === "Enter"){ e.preventDefault(); cardAction(currentCard && currentCard.type === "chat" ? "chatsend" : "submit"); }
     else if (key === "Escape") cardAction("skip");
     return;
   }
@@ -2126,6 +2329,7 @@ window.addEventListener("keydown", e => {
   if (overlayOpen){
     const c = currentCard;
     if (c && c.type === "quiz"){ const n = parseInt(key, 10); if (n >= 1 && n <= c.options.length) cardAction("choose", String(n - 1)); return; }
+    if (c && c.type === "chat" && !c.done){ const n = parseInt(key, 10); if (c.opts && n >= 1 && n <= c.opts.length) cardAction("chatopt", String(n - 1)); return; }
     if (c && c.type === "initials"){ if (key === "Enter") cardAction("submit"); else if (key === "Escape") cardAction("skip"); return; }
     if (k === "l" && state === "title" && api.enabled && c && c.big){ cardAction("records"); return; }
     if (k === "s" && c && (c.big || (state === "pause" && c.buttons))){ cardAction("settings"); return; }
@@ -3459,7 +3663,11 @@ function frame(now){
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
-showTitle();
+(function(){
+  let demo = null; try { demo = new URLSearchParams(location.search).get("chat"); } catch(e){}
+  if (demo){ newStudyRun(); showCards([chatCard("pre"), chatCard("post"), debriefCard()], showTitle); }
+  else showTitle();
+})();
 checkClass();
 })();
 </script>
